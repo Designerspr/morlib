@@ -17,12 +17,18 @@ def padding(img, kernel_size, border_filled):
         imgPadded {nparray} -- the image with values padded.
     '''
     # Validation check
-    if len(img.shape) != 2:
-        raise Exception('Input shape of image or kernel doesn\'t fit.')
-    if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+    try:
+        img = np.array(img)
+        if len(img.shape) != 2:
+            raise Exception('Input shape of image doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
         raise Exception(
-            'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
-        )
+            'Invaild input image:expected ndarray or array-like data but get',
+            type(img))
 
     # ZeroPadding
     x, y = img.shape
@@ -41,12 +47,12 @@ def padding(img, kernel_size, border_filled):
             imgPadded[fx - i, dy:-dy] = imgPadded[fx - dx, dy:-dy]
         imgPadded[:dx, :dy] = imgPadded[dx, dy]
         imgPadded[:dx, fy - dy:] = imgPadded[dx, fy - dy]
-        imgPadded[fx - dx:, fy - dy:] = imgPadded[fy - dx, fy - dy]
-        imgPadded[fx - dx:, :dy] = imgPadded[fy - dx, dy]
+        imgPadded[fx - dx:, fy - dy:] = imgPadded[fx - dx, fy - dy]
+        imgPadded[fx - dx:, :dy] = imgPadded[fx - dx, dy]
     return imgPadded
 
 
-def conv(img, mask, logic):
+def _conv(img, mask, logic):
     '''Convolute the image with the mask of the same size.
     
     Arguments:
@@ -57,11 +63,14 @@ def conv(img, mask, logic):
         {int} -- the binary. 0 or 1.
     '''
     # Validation check
-    if img.shape != mask.shape:
-        raise Exception('image size don\'t fit the kernel size')
-    if not (logic == 'AND' or logic == 'OR'):
-        raise Exception(
-            'parameter logic dosen\'t fit. Use \'AND\' or \'OR\' instead.')
+    try:
+        if img.shape != mask.shape:
+            raise Exception('image size don\'t fit the kernel size')
+        if not (logic == 'AND' or logic == 'OR'):
+            raise Exception(
+                'parameter logic dosen\'t fit. Use \'AND\' or \'OR\' instead.')
+    except:
+        raise Exception('invaild data type:', type(img), '&', type(mask))
 
     # Conv
     imask = np.multiply(img, mask)
@@ -79,15 +88,34 @@ def conv(img, mask, logic):
         return 1
 
 
-def create_kernel(shape, keyword):
-    '''The fast kernel-create function.
+def createKernel(shape, keyword):
+    '''A quick kernel creating function.
     
     Arguments:
-        shape {tuple} -- the shape of the kernel,include x and y(both adivsed to be 2n+1,n>=0).
-                        The equation between x and y are suggested, though not essential.
-        keyword {string} -- description of the kernel.
+        shape {array-like} -- the shape of the kernel.
+        keyword {string} -- should be 'X' or 'rec'.  
+        'X' creates kernel like(shape=(3,3)):[[0, 1, 0],
+                                              [1, 1, 1],
+                                              [0, 1, 0]]
+        while 'rec' does(shape=(3,3)):[[1, 1, 1],
+                                       [1, 1, 1],
+                                       [1, 1, 1]]
+    Returns:
+        [ndarray] -- the kernel
     '''
-    return
+
+    if len(shape) != 2:
+        raise Exception('expect parameters shape with length of 2 but get',
+                        len(shape))
+    if keyword == 'X':
+        kernel = np.zeros(shape)
+        kernel[shape[0] // 2, :] = 1
+        kernel[:, shape[1] // 2] = 1
+    elif keyword == 'rec':
+        kernel = np.ones(shape)
+    else:
+        raise Exception('Undefined keyword:' + keyword)
+    return kernel
 
 
 def imgBinarization(img, thershold=None):
@@ -104,37 +132,41 @@ def imgBinarization(img, thershold=None):
         binary_img {ndarray} , thershold {int}
     '''
     # Validation check
-    if len(img.shape) != 2:
-        raise Exception('Input shape of image doesn\'t fit.')
-    if thershold and (thershold > np.max(img) or thershold < np.min(img)):
-        print('Given thershold is invaild. Use Otsu algorithm instead.')
-        thershold = None
-    
+    try:
+        img = np.array(img)
+        if len(img.shape) != 2:
+            raise Exception('Input shape of image doesn\'t fit.')
+        if thershold and (thershold > np.max(img) or thershold < np.min(img)):
+            print('Given thershold is invaild. Use Otsu algorithm instead.')
+            thershold = None
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img))
+
     # thershold unknown
     if not thershold:
         # Gray scale adjustment
         minV, maxV = np.min(img), np.max(img)
         delta = maxV - minV
         imgAdj = np.array((img - minV) / delta * 255, dtype=np.uint8)
-        u ,w = np.mean(imgAdj), imgAdj.shape[0]*imgAdj.shape[1]
+        u, w = np.mean(imgAdj), imgAdj.shape[0] * imgAdj.shape[1]
         gmax = -np.inf
 
         # Otsu algorithm
         for i in range(1, 255):
             forwardGround = np.where(imgAdj <= i)
-            w0 = len(forwardGround[0])/w
-            u0 = np.sum(imgAdj[forwardGround]) / (w0*w)
+            w0 = len(forwardGround[0]) / w
+            u0 = np.sum(imgAdj[forwardGround]) / (w0 * w)
             w1 = 1 - w0
             u1 = (u - w0 * u0) / w1
-            g = w0*w1*(u1-u0)**2
-            if g >gmax:
+            g = w0 * w1 * (u1 - u0)**2
+            if g > gmax:
                 gmax, thershold = g, i
 
         thershold = thershold / 255 * delta + minV
     # Dividing
     imgOut = np.floor(img / thershold)
-    imgOut[np.where(imgOut!=0)]=1
-    return imgOut,thershold
+    imgOut[np.where(imgOut != 0)] = 1
+    return imgOut, thershold
 
 
 def binErosion(img, kernel, border_filled='CONSTANT'):
@@ -145,15 +177,20 @@ def binErosion(img, kernel, border_filled='CONSTANT'):
         kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
         border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
     Returns:
-        imgOutput {nparray} -- imageErosion
+        imgOutput {nparray} -- morphological erosion operatated image 
     '''
     # Validation check
-    if len(img.shape) != 2 or len(kernel.shape) != 2:
-        raise Exception('Input shape of image or kernel doesn\'t fit.')
-    if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
-        raise Exception(
-            'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
-        )
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
 
     x, y = img.shape
     dx, dy = kernel.shape
@@ -164,7 +201,7 @@ def binErosion(img, kernel, border_filled='CONSTANT'):
     # Erosion Main
     for i in range(x):
         for j in range(y):
-            imgOutput[i, j] = conv(
+            imgOutput[i, j] = _conv(
                 imgPadded[i:i + dx, j:j + dy], kernel, logic='AND')
     #Return
     return imgOutput
@@ -178,15 +215,20 @@ def binDilation(img, kernel, border_filled='CONSTANT'):
         kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
         border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
     Returns:
-        imgOutput {nparray} -- imageDilation
+        imgOutput {nparray} -- morphological dilation operatated image 
     '''
     # Validation check
-    if len(img.shape) != 2 or len(kernel.shape) != 2:
-        raise Exception('Input shape of image or kernel doesn\'t fit.')
-    if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
-        raise Exception(
-            'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
-        )
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
 
     x, y = img.shape
     dx, dy = kernel.shape
@@ -197,7 +239,125 @@ def binDilation(img, kernel, border_filled='CONSTANT'):
     # Erosion Main
     for i in range(x):
         for j in range(y):
-            imgOutput[i, j] = conv(
+            imgOutput[i, j] = _conv(
                 imgPadded[i:i + dx, j:j + dy], kernel, logic='OR')
     #Return
     return imgOutput
+
+
+def binOpen(img, kernel, border_filled='CONSTANT'):
+    '''Execute morphological open operation on the given binary picture, which equals to the dilation operation after erosion operation.  
+    We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
+    Arguments:
+        img {nparray} -- the input binary picture.
+        kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
+        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
+    Returns:
+        imgOpen {nparray} -- morphological open operatated image
+    '''
+    # Validation check
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
+
+    # Erosion + Dilation = Open
+    imgErosion = binErosion(img, kernel, border_filled=border_filled)
+    imgOpen = binDilation(imgErosion, kernel, border_filled=border_filled)
+    return imgOpen
+
+
+def binClose(img, kernel, border_filled='CONSTANT'):
+    '''Execute morphological close operation on the given binary picture, which equals to the dilation operation after erosion operation.  
+    We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
+    Arguments:
+        img {nparray} -- the input binary picture.
+        kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
+        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
+    Returns:
+        imgClose {nparray} -- morphological close operatated image
+    '''
+    # Validation check
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
+
+    # Dilation + Erosion = close
+    imgDilation = binDilation(img, kernel, border_filled=border_filled)
+    imgClose = binDilation(imgDilation, kernel, border_filled=border_filled)
+    return imgClose
+
+
+def binTopHat(img, kernel, border_filled='CONSTANT'):
+    '''Get the Top-Hat image of the given binary picture.  
+    Top-Hat image equals to the difference between the raw image and the open operated image.
+    We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
+    Arguments:
+        img {nparray} -- the input binary picture.
+        kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
+        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
+    Returns:
+        imgTopHat {nparray} -- the Top-Hat image
+    '''
+    # Validation check
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
+
+    # Top-Hat = raw - open
+    imgOpen = binOpen(img, kernel, border_filled=border_filled)
+    imgTopHat = img - imgOpen
+    return imgTopHat
+
+
+def binBlackHat(img, kernel, border_filled='CONSTANT'):
+    '''Get the Black-Hat image of the given binary picture.  
+    Black-Hat image equals to the difference between the close operated image and the raw image.
+    We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
+    Arguments:
+        img {nparray} -- the input binary picture.
+        kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
+        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
+    Returns:
+        imgBlackHat {nparray} -- the Black-Hat image
+    '''
+    # Validation check
+    try:
+        img, kernel = np.array(img), np.array(kernel)
+        if len(img.shape) != 2 or len(kernel.shape) != 2:
+            raise Exception('Input shape of image or kernel doesn\'t fit.')
+        if not (border_filled == 'CONSTANT' or border_filled == 'NEAREST'):
+            raise Exception(
+                'border_filled parameter dosen\'t fit. Use \'CONSTANT\' or \'NEAREST\' instead.'
+            )
+    except:
+        raise Exception('invaild image type:expect ndarray but', type(img),
+                        'or', type(kernel))
+
+    # Black-Hat = raw - open
+    imgClose = binClose(img, kernel, border_filled=border_filled)
+    imgBlackHat = imgClose - img
+    return imgBlackHat

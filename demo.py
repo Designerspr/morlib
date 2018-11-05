@@ -3,13 +3,16 @@ import numpy as np
 from random import random
 from math import ceil
 import matplotlib.pyplot as plt
-# Create the example image
-rawShape = (100, 100)
-rawImage = np.zeros(rawShape)
-rawX, rawY = rawShape
-for x in range(rawX):
-    for y in range(rawY):
-        rawImage[x, y] = ceil(random() - 0.5)
+
+def quickPlot(position,img,cmap=None,title=None):
+    '''Quick Plot Function.'''
+    plt.subplot(position)
+    if cmap:
+        plt.imshow(img,cmap=cmap)
+    else:
+        plt.imshow(img)
+    plt.title(title)
+
 # Read the example image
 img = plt.imread('image.png')
 if img.shape[-1] == 1:
@@ -23,40 +26,38 @@ elif img.shape[-1] == 4:
 else:
     raise Exception('Invaild image.')
 
-# Show the rawImage
-'''
-plt.imshow(rawImage,cmap='binary')
-plt.show()
-
-# Function Test : Padding
-plt.subplot(211)
-paddedImg=morlib.padding(rawImage,(5,5),border_filled='CONSTANT')
-plt.imshow(paddedImg,cmap='binary')
-plt.subplot(212)
-paddedImg=morlib.padding(rawImage,(5,5),border_filled='NEAREST')
-plt.imshow(paddedImg,cmap='binary')
-plt.show()
-
-# Function Test : Conv
-rev=np.abs(rawImage-1)
-print('AND=',morlib.conv(np.array([1,1]),np.array([1,1]),'AND'))
-print('OR=',morlib.conv(rawImage,rev,'OR'))
-'''
-
 # Function test : imgBinaration
-# the image will show with erosion and dilation
+# the image will show with padded image.
 imgBW, thershold = morlib.imgBinarization(imgGray)
 
-# Function Test : binErosion & binDilation
-kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+# Function Test : Padding
+imgConstantPadded=morlib.padding(imgBW,(5,5),border_filled='CONSTANT')
+imgNearestPadded=morlib.padding(imgBW,(5,5),border_filled='NEAREST')
+
+quickPlot(321,img,title='Raw Image')
+quickPlot(322,imgGray,cmap='gray',title='GrayScale Image')
+quickPlot(323,imgBW,cmap='binary',title='Binary Image')
+quickPlot(324,imgConstantPadded,cmap='binary',title='Padding:keyword=Constant')
+quickPlot(325,imgNearestPadded,cmap='binary',title='Padding:keyword=Nearest')
+plt.show()
+
+# Function Test : binErosion & binDilation & createKernel
+kernel = morlib.createKernel((3,3),keyword='X')
 imgErosion = morlib.binErosion(imgBW, kernel, border_filled='CONSTANT')
 imgDilation = morlib.binDilation(imgBW, kernel, border_filled='CONSTANT')
-plt.subplot(221)
-plt.imshow(imgGray, cmap='gray')
-plt.subplot(222)
-plt.imshow(imgBW, cmap='binary')
-plt.subplot(223)
-plt.imshow(imgErosion, cmap='binary')
-plt.subplot(224)
-plt.imshow(imgDilation, cmap='binary')
+
+quickPlot(211,imgErosion,cmap='binary',title='Erosion Image')
+quickPlot(212,imgDilation,cmap='binary',title='Dilation Image')
+plt.show()
+
+# Function Test: Open/Close/Top-Hat/Black-Hat
+imgOpen=morlib.binOpen(imgBW, kernel, border_filled='CONSTANT')
+imgClose=morlib.binClose(imgBW, kernel, border_filled='CONSTANT')
+imgTopHat=morlib.binTopHat(imgBW, kernel, border_filled='CONSTANT')
+imgBlackHat=morlib.binBlackHat(imgBW, kernel, border_filled='CONSTANT')
+
+quickPlot(221,imgOpen,cmap='binary',title='Open')
+quickPlot(222,imgClose,cmap='binary',title='Close')
+quickPlot(223,imgTopHat,cmap='binary',title='Top Hat')
+quickPlot(224,imgBlackHat,cmap='binary',title='Black Hat')
 plt.show()
