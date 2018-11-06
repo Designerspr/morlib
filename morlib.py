@@ -172,10 +172,10 @@ def imgBinarization(img, thershold=None):
 def binErosion(img, kernel, border_filled='CONSTANT'):
     '''Execute morphological erosion operation on the given binary picture.  
     We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
-    Arguments:
+Arguments:
         img {nparray} -- the input binary picture.
         kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
-        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.
+        border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.    
     Returns:
         imgOutput {nparray} -- morphological erosion operatated image 
     '''
