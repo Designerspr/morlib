@@ -172,7 +172,7 @@ def imgBinarization(img, thershold=None):
 def binErosion(img, kernel, border_filled='CONSTANT'):
     '''Execute morphological erosion operation on the given binary picture.  
     We assume that the anchor is at the center of the kernel, so it's better to use odd-length kernel.  
-Arguments:
+    Arguments:
         img {nparray} -- the input binary picture.
         kernel {nparray} -- the kernel used. Whose length should be 2n+1,n>=0.
         border_filled {str} --  indicate the way border filled. 'CONSTANT' means filling with 0; 'NEAREST' will filled with nearest value.    
@@ -299,7 +299,7 @@ def binClose(img, kernel, border_filled='CONSTANT'):
 
     # Dilation + Erosion = close
     imgDilation = binDilation(img, kernel, border_filled=border_filled)
-    imgClose = binDilation(imgDilation, kernel, border_filled=border_filled)
+    imgClose = binErosion(imgDilation, kernel, border_filled=border_filled)
     return imgClose
 
 
@@ -360,4 +360,6 @@ def binBlackHat(img, kernel, border_filled='CONSTANT'):
     # Black-Hat = raw - open
     imgClose = binClose(img, kernel, border_filled=border_filled)
     imgBlackHat = imgClose - img
+    
+    imgBlackHat[np.where(imgBlackHat<0)]=0
     return imgBlackHat
