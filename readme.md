@@ -39,7 +39,7 @@ padding用于在图像周围添加一圈空白或从其周围取样的边框，�
 
 padding is used to add a frame to the image, the size of the frame depends on the kernel. Using padding before the convolution makes the image keep the same size. The example is shown in Fig.1
 
-![fig 1](Figure_1.png)
+![fig 1](pic/Figure_1.png)
 
 ___
 
@@ -114,10 +114,10 @@ binTopHat/binBlackHat分别实现二值图像的顶帽运算和黑帽运算。
 
 All the binary operation functions accepts the same parameters, so there is only one example funtion above.
 binErosion/binDilation realize the erosion and dilation. The example is shown in fig 2.
-![fig_2](Figure_2.png)
+![fig_2](pic/Figure_2.png)
 
 binOpen/binClose realize the open and close operation.
 binTopHat/binBlackHat realize the top hat and the black hat operation.
 These examples are shown in fig 3.
-![fig_3](Figure_3.png)
+![fig_3](pic/Figure_3.png)
 Do remember to choose the right frame filling way, or the processed image may perfrom different from the one of OpenCV.(Tested) 
